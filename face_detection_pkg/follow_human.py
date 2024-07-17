@@ -1,17 +1,3 @@
-# Copyright 2023 Josh Newans
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
@@ -31,11 +17,11 @@ class FollowHuman(Node):
 
 
         self.declare_parameter("rcv_timeout_secs", 1.0)
-        self.declare_parameter("angular_chase_multiplier", 0.7)
-        self.declare_parameter("forward_chase_speed", 0.1)
+        self.declare_parameter("angular_chase_multiplier", 0.005) #  0.005 for 1280x720 frame or x2 for /2frame
+        self.declare_parameter("forward_chase_speed", 0.2)
         self.declare_parameter("search_angular_speed", 0.5)
-        self.declare_parameter("min_dist_thresh", 0.1)
-        self.declare_parameter("filter_value", 0.9)
+        self.declare_parameter("min_dist_thresh", 1.0)
+        self.declare_parameter("filter_value", 0.8)
 
 
         self.rcv_timeout_secs = self.get_parameter('rcv_timeout_secs').get_parameter_value().double_value
@@ -51,16 +37,38 @@ class FollowHuman(Node):
         self.target_val = 0.0
         self.target_dist = 0.0
         self.lastrcvtime = time.time() - 10000
+        self.frame_center_x = 640 # 640 x 480 = 320 (for 1280x720 = 640)
+        self.center_threshold_high = 750 # (370 270 for 640x480 & 750 530 for 1280x720)
+        self.center_threshold_low = 530    
+
+    # def timer_callback(self):
+    #     msg = Twist()
+    #     if (time.time() - self.lastrcvtime < self.rcv_timeout_secs):
+    #         self.get_logger().info('Target: {}'.format(self.target_val))
+    #         self.get_logger().info('Distance: {}'.format(self.target_dist))
+    #         print(self.target_dist)
+    #         if (self.target_dist > self.min_dist_thresh):
+    #             msg.linear.x = self.forward_chase_speed
+    #         msg.angular.z = -self.angular_chase_multiplier*self.target_val
+    #     else:
+    #         self.get_logger().info('Target lost')
+    #         msg.angular.z = self.search_angular_speed
+    #     self.publisher_.publish(msg)
 
     def timer_callback(self):
         msg = Twist()
+        
         if (time.time() - self.lastrcvtime < self.rcv_timeout_secs):
             self.get_logger().info('Target: {}'.format(self.target_val))
             self.get_logger().info('Distance: {}'.format(self.target_dist))
             print(self.target_dist)
+            offset = self.target_val - 640 # Dist from center of the frame 640 x 480 = 320 (for 1280x720 = 640)
+            normalized_offset = ( offset/abs(offset) )
             if (self.target_dist > self.min_dist_thresh):
                 msg.linear.x = self.forward_chase_speed
-            msg.angular.z = -self.angular_chase_multiplier*self.target_val
+            if ( (self.target_val > 750) or (self.target_val < 530) ): # Threshold to be considered centered (370 270 for 640x480 & 750 530 for 1280x720)
+                msg.angular.z = self.angular_chase_multiplier*(-normalized_offset)*abs(offset) 
+                                # Give a normal ang vel val ｜ -1=R_TURN.1=L_TURN ｜ angular speed proportional to how far away it is from the center
         else:
             self.get_logger().info('Target lost')
             msg.angular.z = self.search_angular_speed
@@ -68,6 +76,7 @@ class FollowHuman(Node):
 
     def listener_callback(self, msg):
         f = self.filter_value
+        print(msg.x)
         self.target_val = self.target_val * f + msg.x * (1-f)
         self.target_dist = self.target_dist * f + msg.z * (1-f)
         self.lastrcvtime = time.time()
