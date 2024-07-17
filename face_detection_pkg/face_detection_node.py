@@ -59,8 +59,8 @@ class GetPersonDetection(Node):
             # Convert ROS messages to OpenCV format
             cv_rgb = self.bridge.imgmsg_to_cv2(rgb_data, "bgr8")
             height, width, _ = cv_rgb.shape
-            # print(height)
-            # print(width)
+            print(height)
+            print(width)
             depth_image = self.bridge.imgmsg_to_cv2(depth_data, "32FC1")
     
             # Resize frame for YOLO
@@ -142,6 +142,7 @@ class GetPersonDetection(Node):
                     # Debug visualization
 
                     cv2.circle(cv_rgb, (center[0], center[1]), 5, (0, 0, 255), 2)
+                    cv2.circle(cv_rgb, (320, 240), 5, (0, 255, 0), 1)
                     cv2.rectangle(cv_rgb, (x, y), (x + w, y + h), color, 2)
                     cv2.putText(cv_rgb, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     cv2.putText(cv_rgb, f"Distance: {distance:.2f} m", (x, y - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
