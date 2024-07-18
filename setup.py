@@ -30,7 +30,8 @@ setup(
             'face_detection_node = face_detection_pkg.face_detection_node:main',
             'viewer_node = face_detection_pkg.viewer_node:main',
             'debug_node = face_detection_pkg.debug_node:main',
-            'follow_human = face_detection_pkg.follow_human:main'
+            'follow_human = face_detection_pkg.follow_human:main',
+            'museum_test = face_detection_pkg.museum_test:main'
         ],
     },
 )
